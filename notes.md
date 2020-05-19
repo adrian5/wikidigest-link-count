@@ -3,7 +3,7 @@
 ## Tools
 
 * Wikipedia SQL dumps: https://dumps.wikimedia.org/enwiki/
-* Online DB: https://quarry.wmflabs.org/MSUGRA
+* Online DB: https://quarry.wmflabs.org/
   - (use `WHERE id > 1000000 AND id < 2000000` to prevent expensive queries from timing out)
 * Show Wiki page by ID: `https://en.wikipedia.org/w/index.php?redirect=no&curid=<page_id>`
 
