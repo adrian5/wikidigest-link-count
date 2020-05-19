@@ -1,5 +1,10 @@
 name: Build project and produce executables for Lin/Mac/Win targets
-on: push
+on:
+  push:
+    paths:
+      - Cargo.toml
+      - 'src/**'
+      - '.github/workflows/**'
 jobs:
   build-ubuntu:
     runs-on: ubuntu-latest
