@@ -1,6 +1,6 @@
 [package]
 name = "wikidigest-link-count"
-version = "0.1.0"
+version = "0.1.1"
 authors = ["adrian5 <adrian5@users.noreply.github.com>"]
 edition = "2018"
 publish = false
