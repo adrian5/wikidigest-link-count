@@ -10,7 +10,7 @@ const QUERY_INTERVAL_MS: u64 = 250;
 
 pub struct BufferQueue {
     buffers: Vec<Mutex<String>>,
-    queue: Mutex<VecDeque<usize>>
+    queue: Mutex<VecDeque<usize>>,
 }
 
 impl BufferQueue {
@@ -25,7 +25,7 @@ impl BufferQueue {
 
         Self {
             buffers,
-            queue: Mutex::new(queue)
+            queue: Mutex::new(queue),
         }
     }
 
@@ -34,7 +34,7 @@ impl BufferQueue {
         Buffer {
             id,
             inner: &self.buffers[id],
-            queue: &self.queue
+            queue: &self.queue,
         }
     }
 
@@ -57,7 +57,7 @@ Once released, it pushes its ID back into the shared queue, allowing the resourc
 pub struct Buffer<'a> {
     id: usize,
     inner: &'a Mutex<String>,
-    queue: &'a Mutex<VecDeque<usize>>
+    queue: &'a Mutex<VecDeque<usize>>,
 }
 
 impl<'a> Buffer<'a> {

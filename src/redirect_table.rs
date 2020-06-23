@@ -5,7 +5,7 @@ use crate::{
     buffer_queue::BufferQueue,
     chunked_reader::ChunkedReader,
     progress_display::ProgressDisplay,
-    util::{self, PageId, PageNs, PageTitle}
+    util::{self, PageId, PageNs, PageTitle},
 };
 
 use ahash::AHashMap;
@@ -15,9 +15,15 @@ use regex::Regex;
 use std::io::Read;
 use std::sync::Mutex;
 
-pub fn map_redirects<T>(source: T, pages: AHashMap<(PageNs, PageId), PageTitle>,
-    namespaces: &[PageNs], buffer_size: usize)
-    -> Result<AHashMap<(PageNs, PageTitle), PageTitle>> where T: Read + Send {
+pub fn map_redirects<T>(
+    source: T,
+    pages: AHashMap<(PageNs, PageId), PageTitle>,
+    namespaces: &[PageNs],
+    buffer_size: usize,
+) -> Result<AHashMap<(PageNs, PageTitle), PageTitle>>
+where
+    T: Read + Send,
+{
     let redirects: Mutex<AHashMap<(PageNs, PageTitle), PageTitle>> = Mutex::new(AHashMap::new());
 
     let mut source = ChunkedReader::new(source);
@@ -32,21 +38,27 @@ pub fn map_redirects<T>(source: T, pages: AHashMap<(PageNs, PageId), PageTitle>,
         let regex = &regex;
 
         loop {
-            eprint!("\r2/5 Extracting ‘redirect’ table data and mapping relations \
-                ({:.1} GiB processed)", progress.next());
+            eprint!(
+                "\r2/5 Extracting ‘redirect’ table data and mapping relations \
+                ({:.1} GiB processed)",
+                progress.next()
+            );
             let buffer = buffers.pop();
             let was_final_read = !source.read_into(&mut buffer.borrow(), buffer_size)?;
 
             s.spawn_fifo(move |_| {
                 let mut new_redirects: Vec<((PageNs, PageTitle), PageTitle)> = Vec::new();
+
                 for cap in regex.captures_iter(&buffer.borrow()) {
                     let source_id = PageId(cap[1].parse::<u32>().unwrap());
                     let source_ns = PageNs(cap[2].parse::<u32>().unwrap());
                     let target_title = &cap[3];
 
                     if let Some(source_title) = pages.get(&(source_ns, source_id)) {
-                        new_redirects.push(((source_ns, source_title.clone()),
-                            PageTitle(target_title.to_string())));
+                        new_redirects.push((
+                            (source_ns, source_title.clone()),
+                            PageTitle(target_title.to_string()),
+                        ));
                     }
                 }
 
@@ -88,7 +100,9 @@ to be empty.
 fn build_redirect_regex(namespaces: &[PageNs]) -> Result<Regex> {
     let ns_str = util::namespaces_to_string(namespaces);
 
-    let pattern = format!(r"\((\d+),({}),'((?:[^']|\\'){{1,255}}?)','','(?:[^']|\\'){{0,255}}?'\)",
-        ns_str);
+    let pattern = format!(
+        r"\((\d+),({}),'((?:[^']|\\'){{1,255}}?)','','(?:[^']|\\'){{0,255}}?'\)",
+        ns_str
+    );
     Regex::new(&pattern).context("Building redirect pattern")
 }

@@ -6,6 +6,7 @@ use crate::link_count::LinkCount;
 use ahash::AHashMap;
 use anyhow::Result;
 
+use std::convert::TryFrom;
 use std::fmt;
 use std::fs::File;
 use std::io::Write;
@@ -34,7 +35,22 @@ impl fmt::Display for PageTitle {
 
 #[derive(Clone, Copy)]
 pub enum ExportFormat {
-    PlainText
+    PlainText,
+    WikiText,
+    Markdown
+}
+
+impl TryFrom<&str> for ExportFormat {
+    type Error = String;
+
+    fn try_from(format: &str) -> Result<Self, Self::Error> {
+        match format {
+            "text" => Ok(Self::PlainText),
+            "wiki" => Ok(Self::WikiText),
+            "markdown" => Ok(Self::Markdown),
+            _ => Err(format!("Cannot convert ‘{}’ into ExportFormat", format)),
+        }
+    }
 }
 
 pub fn is_probably_gzip(path: &Path) -> bool {
@@ -50,12 +66,21 @@ pub fn build_output_filename(path: &Path, export_format: ExportFormat) -> PathBu
     use ExportFormat::*;
     let mut filename = path.to_path_buf();
 
-    if path.extension().is_some() { // User supplied extension
-        return filename
+    if path.extension().is_some() {
+        // User supplied extension
+        return filename;
     }
 
     match export_format {
-        PlainText => { filename.set_extension("txt"); }
+        PlainText => {
+            filename.set_extension("txt");
+        },
+        WikiText => {
+            filename.set_extension("txt");
+        },
+        Markdown => {
+            filename.set_extension("md");
+        },
     }
 
     filename
@@ -93,9 +118,12 @@ fn underscores_to_spaces(mut s: String) -> String {
     s
 }
 
-pub fn sort_pagelinks(pagelinks: AHashMap<(PageNs, PageTitle), LinkCount>, cutoff: u32)
-    -> Vec<((PageNs, PageTitle), LinkCount)> {
-    let mut output: Vec<((PageNs, PageTitle), LinkCount)> = pagelinks.into_iter()
+pub fn sort_pagelinks(
+    pagelinks: AHashMap<(PageNs, PageTitle), LinkCount>,
+    cutoff: u32,
+) -> Vec<((PageNs, PageTitle), LinkCount)> {
+    let mut output: Vec<((PageNs, PageTitle), LinkCount)> = pagelinks
+        .into_iter()
         .filter(|pl| pl.1.total() >= cutoff)
         .collect();
 
@@ -103,23 +131,88 @@ pub fn sort_pagelinks(pagelinks: AHashMap<(PageNs, PageTitle), LinkCount>, cutof
     output
 }
 
-pub fn export_to_file(pages: Vec<((PageNs, PageTitle), LinkCount)>, mut file: File,
-    format: ExportFormat) -> Result<()> {
+pub fn export_to_file(
+    pages: Vec<((PageNs, PageTitle), LinkCount)>,
+    mut file: File,
+    format: ExportFormat,
+) -> Result<()> {
     use ExportFormat::*;
 
     match format {
         PlainText => write_plaintext(&mut file, pages)?,
+        WikiText => write_wikitext(&mut file, pages)?,
+        Markdown => write_markdown(&mut file, pages)?,
     }
 
     Ok(())
 }
 
 fn write_plaintext(file: &mut File, pages: Vec<((PageNs, PageTitle), LinkCount)>) -> Result<()> {
-    writeln!(file, "page title [namespace]  →  links-total (direct + indirect)\n")?;
+    writeln!(
+        file,
+        "page title [namespace]  →  links-total (direct + indirect)\n"
+    )?;
     for p in pages {
         let title = underscores_to_spaces(((p.0).1).0);
-        writeln!(file, "{} [{}]  →  {} ({} + {})",
-            title, (p.0).0, p.1.total(), p.1.direct, p.1.indirect)?;
+        writeln!(
+            file,
+            "{} [{}]  →  {} ({} + {})",
+            title,
+            (p.0).0,
+            p.1.total(),
+            p.1.direct,
+            p.1.indirect
+        )?;
     }
     Ok(())
 }
+
+fn write_wikitext(file: &mut File, pages: Vec<((PageNs, PageTitle), LinkCount)>) -> Result<()> {
+    writeln!(file, "{{|class=\"wikitable sortable\"")?;
+    writeln!(
+        file,
+        "! Page !! Ns !! Links total !! Direct !! via redirect\n|-"
+    )?;
+
+    for p in pages {
+        let title = underscores_to_spaces(((p.0).1).0);
+        writeln!(
+            file,
+            "| [[{}]] || {} || {} || {} || {}\n|-",
+            title,
+            (p.0).0,
+            p.1.total(),
+            p.1.direct,
+            p.1.indirect
+        )?;
+    }
+
+    writeln!(file, "|}}")?;
+    Ok(())
+}
+
+fn write_markdown(file: &mut File, pages: Vec<((PageNs, PageTitle), LinkCount)>) -> Result<()> {
+    // NOTE: Markdown tables are non-standard (GitHub Flavored Markdown); This function also
+    // doesn't pretty-print the table, which would require significantly more logic.
+    writeln!(
+        file,
+        "Page | Ns | Links total | Direct | via redirect\n\
+        :--- | :---: | ---: | ---: | ---:"
+    )?;
+
+    for p in pages {
+        let title = underscores_to_spaces(((p.0).1).0);
+        writeln!(
+            file,
+            "{} | {} | {} | {} | {}",
+            title,
+            (p.0).0,
+            p.1.total(),
+            p.1.direct,
+            p.1.indirect
+        )?;
+    }
+
+    Ok(())
+}
+

@@ -14,7 +14,7 @@ impl ProgressDisplay {
 
         ProgressDisplay {
             progress_counter: 0,
-            buffer_size_gib
+            buffer_size_gib,
         }
     }
 

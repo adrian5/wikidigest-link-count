@@ -28,9 +28,9 @@ The program requires three input files to operate:
 
 For the English Wikipedia, you can get these at <https://dumps.wikimedia.org/enwiki/> as:
 
-* enwiki-yyyy-mm-dd-page.sql.gz
-* enwiki-yyyy-mm-dd-redirect.sql.gz
-* enwiki-yyyy-mm-dd-pagelinks.sql.gz
+* enwiki-yyyymmdd-page.sql.gz
+* enwiki-yyyymmdd-redirect.sql.gz
+* enwiki-yyyymmdd-pagelinks.sql.gz
 
 ### Hardware
 
@@ -62,9 +62,15 @@ Custom (128 MiB) buffer size and a link-count cutoff of 185K, below which pages 
 wikidigest-link-count -p page.sql.gz -r redirect.sql.gz -l pagelinks.sql.gz -o /tmp/185k-or-more -b 128 -c 185000
 ```
 
+Export as different format ([WikiText](https://en.wikipedia.org/wiki/Help:Wikitext) table):
+
+```
+wikidigest-link-count -p page.sql -r redirect.sql -l pagelinks.sql -e wikitext
+```
+
 ## Results
 
-Results are written to a plain text file.
+Results are written to an output file, by default as Plaintext to `./results.txt`.
 
 Below results for the English Wikipedia, Apr 2020 – pages with 200K or more incoming links
 within the main (0) namespace:

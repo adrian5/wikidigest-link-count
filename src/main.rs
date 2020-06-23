@@ -29,8 +29,8 @@ fn main() -> Result<()> {
 
     // Process page-table data
     let pages = {
-        let f = File::open(&cli.page_file).with_context(
-            || format!("Failed to open page file ‘{}’", &cli.page_file.display()))?;
+        let f = File::open(&cli.page_file)
+            .with_context(|| format!("Failed to open page file ‘{}’", &cli.page_file.display()))?;
         if util::is_probably_gzip(&cli.page_file) {
             page_table::collect_pages(GzDecoder::new(f), &cli.namespaces_to, buf_size)
         } else {
@@ -40,8 +40,12 @@ fn main() -> Result<()> {
 
     // Process redirect-table data
     let redirects = {
-        let f = File::open(&cli.redirect_file).with_context(
-            || format!("Failed to open redirect file ‘{}’", &cli.redirect_file.display()))?;
+        let f = File::open(&cli.redirect_file).with_context(|| {
+            format!(
+                "Failed to open redirect file ‘{}’",
+                &cli.redirect_file.display()
+            )
+        })?;
         if util::is_probably_gzip(&cli.redirect_file) {
             redirect_table::map_redirects(GzDecoder::new(f), pages, &cli.namespaces_to, buf_size)
         } else {
@@ -51,14 +55,26 @@ fn main() -> Result<()> {
 
     // Process pagelinks-table data
     let pagelinks = {
-        let f = File::open(&cli.pagelinks_file).with_context(
-            || format!("Failed to open pagelinks file ‘{}’", &cli.pagelinks_file.display()))?;
+        let f = File::open(&cli.pagelinks_file).with_context(|| {
+            format!(
+                "Failed to open pagelinks file ‘{}’",
+                &cli.pagelinks_file.display()
+            )
+        })?;
         if util::is_probably_gzip(&cli.pagelinks_file) {
-            pagelinks_table::count_links(GzDecoder::new(f), redirects,
-                (&cli.namespaces_from, &cli.namespaces_to), buf_size)
+            pagelinks_table::count_links(
+                GzDecoder::new(f),
+                redirects,
+                (&cli.namespaces_from, &cli.namespaces_to),
+                buf_size,
+            )
         } else {
-            pagelinks_table::count_links(f, redirects, (&cli.namespaces_from, &cli.namespaces_to),
-                buf_size)
+            pagelinks_table::count_links(
+                f,
+                redirects,
+                (&cli.namespaces_from, &cli.namespaces_to),
+                buf_size,
+            )
         }
     }?;
 

@@ -4,10 +4,10 @@ the door to parallel processing.
 */
 use std::io::{Read, Result};
 
-pub struct ChunkedReader<T> {
+pub struct ChunkedReader<T: Read> {
     source: T,
     remainder: Vec<u8>,
-    exhausted: bool
+    exhausted: bool,
 }
 
 impl<T: Read> ChunkedReader<T> {
@@ -15,7 +15,7 @@ impl<T: Read> ChunkedReader<T> {
         Self {
             source,
             remainder: Vec::new(),
-            exhausted: false
+            exhausted: false,
         }
     }
 
@@ -44,7 +44,8 @@ impl<T: Read> ChunkedReader<T> {
             dest.set_len(target_size); // Restore to full target size
             while bytes_read_total < target_size {
                 let bytes_read = self.source.read(&mut dest[bytes_read_total..])?;
-                if bytes_read == 0 { // Assume final read
+                if bytes_read == 0 {
+                    // Assume final read
                     dest.truncate(bytes_read_total);
                     self.exhausted = true;
                     return Ok(false); // Signal final read
@@ -88,7 +89,8 @@ impl<T: Read> ChunkedReader<T> {
             chunk.set_len(target_size); // Restore to full target size
             while bytes_read_total < target_size {
                 let bytes_read = self.source.read(&mut chunk[bytes_read_total..])?;
-                if bytes_read == 0 { // Assume final read
+                if bytes_read == 0 {
+                    // Assume final read
                     chunk.truncate(bytes_read_total);
                     self.exhausted = true;
                     break;
@@ -101,7 +103,8 @@ impl<T: Read> ChunkedReader<T> {
             // Split at last newline, keep right-hand side for next chunk
             self.remainder.clear();
             if let Some(cutoff) = chunk.rfind('\n') {
-                self.remainder.extend_from_slice(&chunk.as_bytes()[cutoff..]);
+                self.remainder
+                    .extend_from_slice(&chunk.as_bytes()[cutoff..]);
                 chunk.truncate(cutoff);
             }
         }

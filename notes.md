@@ -24,6 +24,4 @@
   - XML
   - JSON
   - HTML (table)
-  - Markdown (table)
-  - Wiki (table)
 

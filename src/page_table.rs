@@ -5,7 +5,7 @@ use crate::{
     buffer_queue::BufferQueue,
     chunked_reader::ChunkedReader,
     progress_display::ProgressDisplay,
-    util::{self, PageId, PageNs, PageTitle}
+    util::{self, PageId, PageNs, PageTitle},
 };
 
 use ahash::AHashMap;
@@ -15,8 +15,14 @@ use regex::Regex;
 use std::io::Read;
 use std::sync::Mutex;
 
-pub fn collect_pages<T>(source: T, namespaces: &[PageNs], buffer_size: usize)
-    -> Result<AHashMap<(PageNs, PageId), PageTitle>> where T: Read + Send {
+pub fn collect_pages<T>(
+    source: T,
+    namespaces: &[PageNs],
+    buffer_size: usize,
+) -> Result<AHashMap<(PageNs, PageId), PageTitle>>
+where
+    T: Read + Send,
+{
     let pages: Mutex<AHashMap<(PageNs, PageId), PageTitle>> = Mutex::new(AHashMap::new());
 
     let mut source = ChunkedReader::new(source);
@@ -30,7 +36,10 @@ pub fn collect_pages<T>(source: T, namespaces: &[PageNs], buffer_size: usize)
         let regex = &regex;
 
         loop {
-            eprint!("\r1/5 Extracting ‘page’ table data ({:.1} GiB processed)", progress.next());
+            eprint!(
+                "\r1/5 Extracting ‘page’ table data ({:.1} GiB processed)",
+                progress.next()
+            );
             let buffer = buffers.pop();
             let was_final_read = !source.read_into(&mut buffer.borrow(), buffer_size)?;
 
@@ -82,7 +91,9 @@ for the sake of completeness. Cost seems negligible.
 fn build_page_regex(namespaces: &[PageNs]) -> Result<Regex> {
     let ns_str = util::namespaces_to_string(namespaces);
 
-    let pattern = format!(r"\((\d+),({}),'((?:[^']|\\'){{1,255}}?)','[a-z,:=]*?',1,", ns_str);
+    let pattern = format!(
+        r"\((\d+),({}),'((?:[^']|\\'){{1,255}}?)','[a-z,:=]*?',1,",
+        ns_str
+    );
     Regex::new(&pattern).context("Building page regex")
 }
-

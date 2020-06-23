@@ -6,7 +6,7 @@ use crate::{
     chunked_reader::ChunkedReader,
     link_count::LinkCount,
     progress_display::ProgressDisplay,
-    util::{self, PageNs, PageTitle}
+    util::{self, PageNs, PageTitle},
 };
 
 use ahash::AHashMap;
@@ -19,12 +19,18 @@ use std::sync::Mutex;
 #[derive(Debug, Default)]
 pub struct Counter {
     pub direct: u32,
-    pub indirect: u32
+    pub indirect: u32,
 }
 
-pub fn count_links<T>(source: T, redirects: AHashMap<(PageNs, PageTitle), PageTitle>,
-    namespaces: (&[PageNs], &[PageNs]), buffer_size: usize)
-    -> Result<AHashMap<(PageNs, PageTitle), LinkCount>> where T: Read + Send {
+pub fn count_links<T>(
+    source: T,
+    redirects: AHashMap<(PageNs, PageTitle), PageTitle>,
+    namespaces: (&[PageNs], &[PageNs]),
+    buffer_size: usize,
+) -> Result<AHashMap<(PageNs, PageTitle), LinkCount>>
+where
+    T: Read + Send,
+{
     let pagelinks: Mutex<AHashMap<(PageNs, PageTitle), LinkCount>> = Mutex::new(AHashMap::new());
 
     let mut source = ChunkedReader::new(source);
@@ -39,13 +45,17 @@ pub fn count_links<T>(source: T, redirects: AHashMap<(PageNs, PageTitle), PageTi
         let regex = &regex;
 
         loop {
-            eprint!("\r3/5 Extracting ‘pagelinks’ table data and counting links \
-                    ({:.1} GiB processed)", progress.next());
+            eprint!(
+                "\r3/5 Extracting ‘pagelinks’ table data and counting links \
+                    ({:.1} GiB processed)",
+                progress.next()
+            );
             let buffer = buffers.pop();
             let was_final_read = !source.read_into(&mut buffer.borrow(), buffer_size)?;
 
             s.spawn_fifo(move |_| {
                 let mut new_pagelinks = AHashMap::<(PageNs, PageTitle), LinkCount>::new();
+
                 for cap in regex.captures_iter(&buffer.borrow()) {
                     let ns = PageNs(cap[1].parse::<u32>().unwrap());
                     let title = &cap[2];
@@ -60,8 +70,8 @@ pub fn count_links<T>(source: T, redirects: AHashMap<(PageNs, PageTitle), PageTi
                         if let Some(link_count) = pl_query(&mut new_pagelinks, ns, title) {
                             link_count.direct += 1;
                         } else {
-                            new_pagelinks.insert((ns, PageTitle(title.to_string())),
-                                LinkCount::new(1, 0));
+                            new_pagelinks
+                                .insert((ns, PageTitle(title.to_string())), LinkCount::new(1, 0));
                         }
                     }
                 }
@@ -105,13 +115,14 @@ but it offers some protection against fauly matches in the case of erroneous dat
 ,(?:{}), : match the ‘pl_from_namespace’ on any of the numbers passed via the first namespaces
 function parameter.
 */
-fn build_pagelinks_regex(namespaces_from: &[PageNs], namespaces_to: &[PageNs])
-    -> Result<Regex> {
+fn build_pagelinks_regex(namespaces_from: &[PageNs], namespaces_to: &[PageNs]) -> Result<Regex> {
     let ns_from_str = util::namespaces_to_string(namespaces_from);
     let ns_to_str = util::namespaces_to_string(namespaces_to);
 
-    let pattern = format!(r"\(\d+,({}),'((?:[^']|\\'){{1,255}}?)',(?:{})\)",
-        ns_to_str, ns_from_str);
+    let pattern = format!(
+        r"\(\d+,({}),'((?:[^']|\\'){{1,255}}?)',(?:{})\)",
+        ns_to_str, ns_from_str
+    );
     Regex::new(&pattern).context("Building pagelinks regex")
 }
 
@@ -121,22 +132,42 @@ the lifetime of a query parameter is required to encompass that of the HashMap. 
 temporary &str from the regex iterator, they would require cloning into String for each query.
 */
 #[inline]
-fn rd_query<'a>(rd: &'a AHashMap<(PageNs, PageTitle), PageTitle>, ns: PageNs, title: &str)
-    -> Option<&'a PageTitle> {
-    unsafe { // Satisfy the &(PageNs, String) interface without new allocations
-        let key = (ns, PageTitle(String::from_raw_parts(title.as_ptr() as *mut u8,
-            title.len(), title.len())));
+fn rd_query<'a>(
+    rd: &'a AHashMap<(PageNs, PageTitle), PageTitle>,
+    ns: PageNs,
+    title: &str,
+) -> Option<&'a PageTitle> {
+    unsafe {
+        // Satisfy the &(PageNs, String) interface without reallocations
+        let key = (
+            ns,
+            PageTitle(String::from_raw_parts(
+                title.as_ptr() as *mut u8,
+                title.len(),
+                title.len(),
+            )),
+        );
         let key = std::mem::ManuallyDrop::new(key);
         rd.get(&*key)
     }
 }
 
 #[inline]
-fn pl_query<'a>(pl: &'a mut AHashMap<(PageNs, PageTitle), LinkCount>, ns: PageNs, title: &str)
--> Option<&'a mut LinkCount> {
-    unsafe { // As above
-        let key = (ns, PageTitle(String::from_raw_parts(title.as_ptr() as *mut u8,
-            title.len(), title.len())));
+fn pl_query<'a>(
+    pl: &'a mut AHashMap<(PageNs, PageTitle), LinkCount>,
+    ns: PageNs,
+    title: &str,
+) -> Option<&'a mut LinkCount> {
+    unsafe {
+        // As above
+        let key = (
+            ns,
+            PageTitle(String::from_raw_parts(
+                title.as_ptr() as *mut u8,
+                title.len(),
+                title.len(),
+            )),
+        );
         let key = std::mem::ManuallyDrop::new(key);
         pl.get_mut(&*key)
     }

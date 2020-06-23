@@ -7,7 +7,7 @@ use std::ops::AddAssign;
 #[derive(Clone, Copy, Debug, Default)]
 pub struct LinkCount {
     pub direct: u32,
-    pub indirect: u32
+    pub indirect: u32,
 }
 
 impl LinkCount {
@@ -24,7 +24,7 @@ impl AddAssign for LinkCount {
     fn add_assign(&mut self, other: LinkCount) {
         *self = Self {
             direct: self.direct + other.direct,
-            indirect: self.indirect + other.indirect
+            indirect: self.indirect + other.indirect,
         };
     }
 }
