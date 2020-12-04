@@ -1,0 +1,68 @@
+name: Build project and produce executables for Lin/Mac/Win targets
+on:
+  push:
+    paths:
+      - Cargo.toml
+      - 'src/**'
+      - '.github/workflows/**'
+jobs:
+  build-ubuntu:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+
+    - name: Build executable (cargo)
+      run: |
+        mkdir ~/build
+        cargo build --release --target-dir ~/build
+        mv ~/build/release/wikidigest-link-count ~/build
+
+    - name: Strip debug symbols
+      run: strip ~/build/wikidigest-link-count
+
+    - name: Compress executable (xz)
+      run: |
+        tar -cJf ~/build/wikidigest-link-count-linux64.tar.xz -C ~/build/ wikidigest-link-count
+
+    - uses: actions/upload-artifact@v2
+      with:
+        name: linux-release
+        path: ~/build/wikidigest-link-count-linux64.tar.xz
+
+  build-macos:
+    runs-on: macos-latest
+    steps:
+    - uses: actions/checkout@v2
+
+    - name: Build executable (cargo)
+      run: |
+        mkdir ~/build
+        cargo build --release --target-dir ~/build
+        mv ~/build/release/wikidigest-link-count ~/build
+
+    - name: Strip debug symbols
+      run: strip ~/build/wikidigest-link-count
+
+    - name: Compress executable (zip)
+      run: zip -j ~/build/wikidigest-link-count-macos.zip ~/build/wikidigest-link-count
+
+    - uses: actions/upload-artifact@v2
+      with:
+        name: macos-release
+        path: ~/build/wikidigest-link-count-macos.zip
+
+  build-windows:
+    runs-on: windows-latest
+    steps:
+    - uses: actions/checkout@v2
+
+    - name: Build executable (cargo)
+      run: cargo build --release
+
+    - name: Compress executable (zip)
+      run: Compress-Archive -Path ./target/release/wikidigest-link-count.exe -CompressionLevel Optimal -DestinationPath ~/wikidigest-link-count-win64.zip
+
+    - uses: actions/upload-artifact@v2
+      with:
+        name: windows-release
+        path: ~/wikidigest-link-count-win64.zip
